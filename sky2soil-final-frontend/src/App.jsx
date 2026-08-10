@@ -7,6 +7,7 @@ import Prediction from "./pages/Prediction";
 import Recommendations from "./pages/Recommendations";
 import Alerts from "./pages/Alerts";
 import Simulator from "./pages/Simulator";
+import FloatingVoiceAssistant from "./components/FloatingVoiceAssistant";
 import { getLatestPrediction, getLatestSensor, subscribeToStatus, checkBackendStatus } from "./lib/api";
 
 const pages = {
@@ -22,6 +23,7 @@ const pages = {
 export default function App() {
   const [activePage, setActivePage] = useState("dashboard");
   const [latestSensor, setLatestSensor] = useState(null);
+  const [sensorHistory, setSensorHistory] = useState([]);
   const [latestPrediction, setLatestPrediction] = useState(null);
   const [sensorLoading, setSensorLoading] = useState(true);
   const [predictionLoading, setPredictionLoading] = useState(true);
@@ -58,7 +60,14 @@ export default function App() {
       try {
         const payload = await getLatestSensor();
         if (!active) return;
+        
         setLatestSensor(payload.data);
+        setSensorHistory(prev => {
+          const newHistory = [...prev, payload.data];
+          if (newHistory.length > 100) newHistory.shift(); // Keep only last 100
+          return newHistory;
+        });
+        
         setSensorError("");
       } catch (error) {
         if (!active) return;
@@ -107,6 +116,7 @@ export default function App() {
 
   const appData = {
     latestSensor,
+    sensorHistory,
     latestPrediction,
     sensorLoading,
     predictionLoading,
@@ -136,8 +146,11 @@ export default function App() {
   };
 
   return (
-    <AppShell activePage={activePage} setActivePage={setActivePage} appData={appData}>
-      <ActivePage appData={appData} />
-    </AppShell>
+    <>
+      <AppShell activePage={activePage} setActivePage={setActivePage} appData={appData}>
+        <ActivePage appData={appData} />
+      </AppShell>
+      <FloatingVoiceAssistant appData={appData} />
+    </>
   );
 }
